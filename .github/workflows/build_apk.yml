@@ -51,11 +51,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.1.0 --yes 2>/dev/null || true
-          git tag -d v1.1.0 2>/dev/null || true
-          git push origin :refs/tags/v1.1.0 2>/dev/null || true
-          gh release create v1.1.0 \
+          gh release delete v1.2.0 --yes 2>/dev/null || true
+          git tag -d v1.2.0 2>/dev/null || true
+          git push origin :refs/tags/v1.2.0 2>/dev/null || true
+          gh release create v1.2.0 \
             app/build/outputs/apk/release/app-release.apk \
             app/build/outputs/apk/debug/app-debug.apk \
-            --title "Galaxy A7 Flashlight v1.1.0" \
-            --notes "v1.1.0: Official libsu integration for Magisk root dialog and zero-lag hardware execution, complete OLED dark theme overhaul with zero purple accents, and interactive presets."
+            --title "Galaxy A7 Flashlight v1.2.0" \
+            --notes "v1.2.0: Direct Samsung S2MU005 PMIC kernel driver control for Front (leds-sec2) and Rear (leds-sec1) LEDs with full 100% brightness and instantaneous zero-lag response."
