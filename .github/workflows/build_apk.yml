@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android Release APK
 
 on:
   push:
@@ -30,20 +30,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build APKs (Debug & Release)
-        run: ./gradlew assembleDebug assembleRelease --stacktrace --no-daemon
-
-      - name: Upload Debug APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: GalaxyA7Flashlight-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+      - name: Build Release APK (arm64-v8a)
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: GalaxyA7Flashlight-release
+          name: GalaxyA7Flashlight-arm64-release
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
@@ -51,11 +44,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.2.0 --yes 2>/dev/null || true
-          git tag -d v1.2.0 2>/dev/null || true
-          git push origin :refs/tags/v1.2.0 2>/dev/null || true
-          gh release create v1.2.0 \
+          gh release delete v1.3.0 --yes 2>/dev/null || true
+          git tag -d v1.3.0 2>/dev/null || true
+          git push origin :refs/tags/v1.3.0 2>/dev/null || true
+          gh release create v1.3.0 \
             app/build/outputs/apk/release/app-release.apk \
-            app/build/outputs/apk/debug/app-debug.apk \
-            --title "Galaxy A7 Flashlight v1.2.0" \
-            --notes "v1.2.0: Direct Samsung S2MU005 PMIC kernel driver control for Front (leds-sec2) and Rear (leds-sec1) LEDs with full 100% brightness and instantaneous zero-lag response."
+            --title "Galaxy A7 Flashlight v1.3.0 (arm64-v8a)" \
+            --notes "v1.3.0: Optimized arm64-v8a release build with direct S2MU005 PMIC hardware brightness control (0..15 for Front Selfie, 0..31 for Rear Flash) and zero-lag libsu integration."
