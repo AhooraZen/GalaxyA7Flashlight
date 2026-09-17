@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">چراغ‌قوه A7</string>
+    <string name="device_title">گلکسی A7 2018</string>
+    <string name="device_subtitle">اگزینوس 7885 • لینیج او‌اس 18.1</string>
+    <string name="root_status_granted">دسترسی روت فعال</string>
+    <string name="root_status_denied">عدم دسترسی روت</string>
+    <string name="rear_flash_title">فلش پشت</string>
+    <string name="rear_flash_desc">ال‌ای‌دی ماژول دوربین پشت</string>
+    <string name="front_flash_title">فلش سلفی جلو</string>
+    <string name="front_flash_desc">ال‌ای‌دی فیزیکی جلوی گوشی</string>
+    <string name="status_on">روشن</string>
+    <string name="status_off">خاموش</string>
+    <string name="brightness_level">سطح نور: %1$d از ۵ (%2$d٪)</string>
+    <string name="master_actions">کنترل همگانی</string>
+    <string name="both_on">روشن کردن هر دو</string>
+    <string name="both_off">خاموش کردن همه</string>
+    <string name="preset_20">۲۰٪</string>
+    <string name="preset_40">۴۰٪</string>
+    <string name="preset_60">۶۰٪</string>
+    <string name="preset_80">۸۰٪</string>
+    <string name="preset_100">۱۰۰٪</string>
+</resources>
