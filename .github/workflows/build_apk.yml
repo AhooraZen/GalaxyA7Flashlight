@@ -11,6 +11,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -27,8 +30,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+      - name: Build APKs (Debug & Release)
+        run: ./gradlew assembleDebug assembleRelease --stacktrace --no-daemon
 
       - name: Upload Debug APK Artifact
         uses: actions/upload-artifact@v4
@@ -36,3 +39,23 @@ jobs:
           name: GalaxyA7Flashlight-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GalaxyA7Flashlight-release
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Create or Update GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete v1.0.0 --yes 2>/dev/null || true
+          git tag -d v1.0.0 2>/dev/null || true
+          git push origin :refs/tags/v1.0.0 2>/dev/null || true
+          gh release create v1.0.0 \
+            app/build/outputs/apk/release/app-release.apk \
+            app/build/outputs/apk/debug/app-debug.apk \
+            --title "Galaxy A7 Flashlight v1.0.0" \
+            --notes "Initial Release for Samsung Galaxy A7 2018 (a7y18lte / Exynos 7885 / LineageOS 18.1). Includes independent Rear and Front Selfie Torch control with 5 hardware intensity levels."
