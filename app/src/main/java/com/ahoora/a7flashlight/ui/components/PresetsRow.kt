@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlashlightOn
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -29,20 +30,20 @@ fun PresetsRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(SurfaceDark.copy(alpha = 0.8f))
-            .border(1.dp, BorderSubtle, RoundedCornerShape(20.dp))
-            .padding(16.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .background(SurfaceCard)
+            .border(1.dp, BorderSubtle, RoundedCornerShape(22.dp))
+            .padding(18.dp)
     ) {
         Text(
             text = stringResource(R.string.master_actions),
             style = Typography.titleMedium,
             fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
         // All ON / All OFF buttons
         Row(
@@ -52,15 +53,16 @@ fun PresetsRow(
             Button(
                 onClick = onAllOn,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = ElectricBlue,
-                    contentColor = TextPrimary
+                    containerColor = NeonGreen,
+                    contentColor = PureBlack
                 ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Icon(
-                    imageVector = Icons.Default.PowerSettingsNew,
+                    imageVector = Icons.Default.FlashlightOn,
                     contentDescription = null,
+                    tint = PureBlack,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -71,17 +73,25 @@ fun PresetsRow(
                 )
             }
 
-            OutlinedButton(
+            Button(
                 onClick = onAllOff,
-                colors = ButtonDefaults.outlinedButtonColors(
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = DeepMidnight,
                     contentColor = TextSecondary
                 ),
+                shape = RoundedCornerShape(12.dp),
                 border = ButtonDefaults.outlinedButtonBorder.copy(
                     brush = androidx.compose.ui.graphics.SolidColor(BorderSubtle)
                 ),
-                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.weight(1f)
             ) {
+                Icon(
+                    imageVector = Icons.Default.PowerSettingsNew,
+                    contentDescription = null,
+                    tint = TextMuted,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.both_off),
                     fontWeight = FontWeight.Medium,
@@ -102,19 +112,19 @@ fun PresetsRow(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 3.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(SurfaceCard)
-                        .border(1.dp, BorderSubtle, RoundedCornerShape(10.dp))
+                        .padding(horizontal = 2.5.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(DeepMidnight)
+                        .border(1.dp, BorderSubtle, RoundedCornerShape(8.dp))
                         .clickable { onPresetSelect(level) }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = label,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = SkyBlue
+                        fontWeight = FontWeight.Bold,
+                        color = ElectricCyan
                     )
                 }
             }

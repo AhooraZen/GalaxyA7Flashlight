@@ -11,8 +11,8 @@ android {
         applicationId = "com.ahoora.a7flashlight"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -77,4 +77,7 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
+    // Official TopJohnWu Magisk libsu for guaranteed root access & zero lag
+    implementation("com.github.topjohnwu.libsu:core:5.2.2")
 }

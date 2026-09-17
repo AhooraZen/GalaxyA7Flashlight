@@ -1,7 +1,7 @@
 package com.ahoora.a7flashlight.ui.theme
 
 import android.app.Activity
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -10,37 +10,60 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+private val CustomDarkColorScheme = darkColorScheme(
     primary = NeonGreen,
-    secondary = ElectricBlue,
-    tertiary = SkyBlue,
-    background = BgDark,
-    surface = SurfaceDark,
-    onPrimary = BgDark,
-    onSecondary = TextPrimary,
-    onTertiary = BgDark,
+    onPrimary = PureBlack,
+    primaryContainer = Color(0xFF003816),
+    onPrimaryContainer = NeonGreen,
+    inversePrimary = NeonGreen,
+
+    secondary = ElectricCyan,
+    onSecondary = PureBlack,
+    secondaryContainer = Color(0xFF00363D),
+    onSecondaryContainer = ElectricCyan,
+
+    tertiary = DeepBlue,
+    onTertiary = TextPrimary,
+    tertiaryContainer = Color(0xFF001F5C),
+    onTertiaryContainer = ElectricCyan,
+
+    background = PureBlack,
     onBackground = TextPrimary,
-    onSurface = TextPrimary
+
+    surface = DeepMidnight,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceCard,
+    onSurfaceVariant = TextSecondary,
+    surfaceTint = NeonGreen,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = PureBlack,
+
+    outline = BorderSubtle,
+    outlineVariant = BorderHighlight,
+    scrim = PureBlack,
+    error = DangerRed,
+    onError = PureBlack,
+    errorContainer = DangerRedGlow,
+    onErrorContainer = DangerRed
 )
 
 @Composable
 fun GalaxyA7FlashlightTheme(
     content: @Composable () -> Unit
 ) {
-    val colorScheme = DarkColorScheme
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = BgDark.toArgb()
-            window.navigationBarColor = BgDark.toArgb()
+            window.statusBarColor = PureBlack.toArgb()
+            window.navigationBarColor = PureBlack.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
             WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
         }
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = CustomDarkColorScheme,
         typography = Typography,
         content = content
     )

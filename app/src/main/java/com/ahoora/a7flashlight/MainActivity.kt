@@ -3,7 +3,6 @@ package com.ahoora.a7flashlight
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,8 +20,10 @@ import com.ahoora.a7flashlight.data.TorchManager
 import com.ahoora.a7flashlight.ui.components.HeaderSection
 import com.ahoora.a7flashlight.ui.components.PresetsRow
 import com.ahoora.a7flashlight.ui.components.TorchCard
-import com.ahoora.a7flashlight.ui.theme.BgDark
+import com.ahoora.a7flashlight.ui.theme.ElectricCyan
 import com.ahoora.a7flashlight.ui.theme.GalaxyA7FlashlightTheme
+import com.ahoora.a7flashlight.ui.theme.NeonGreen
+import com.ahoora.a7flashlight.ui.theme.PureBlack
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +33,11 @@ class MainActivity : ComponentActivity() {
                 FlashlightApp()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        TorchManager.requestRoot()
     }
 
     override fun onDestroy() {
@@ -49,27 +55,28 @@ fun FlashlightApp() {
     val isRootGranted by TorchManager.isRootGranted.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = BgDark
+        containerColor = PureBlack
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp)
+                .padding(horizontal = 18.dp, vertical = 20.dp)
         ) {
             // App Header
             HeaderSection(isRootGranted = isRootGranted)
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Rear Flash Card
+            // Rear Flash Card (Neon Green Accent)
             TorchCard(
                 title = stringResource(R.string.rear_flash_title),
                 description = stringResource(R.string.rear_flash_desc),
                 icon = Icons.Default.CameraAlt,
                 isOn = isRearOn,
                 level = rearLevel,
+                accentColor = NeonGreen,
                 onToggle = { enabled ->
                     TorchManager.setRearTorch(enabled)
                 },
@@ -78,15 +85,16 @@ fun FlashlightApp() {
                 }
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Front Selfie Flash Card
+            // Front Selfie Flash Card (Electric Cyan Accent)
             TorchCard(
                 title = stringResource(R.string.front_flash_title),
                 description = stringResource(R.string.front_flash_desc),
                 icon = Icons.Default.Face,
                 isOn = isFrontOn,
                 level = frontLevel,
+                accentColor = ElectricCyan,
                 onToggle = { enabled ->
                     TorchManager.setFrontTorch(enabled)
                 },
@@ -95,7 +103,7 @@ fun FlashlightApp() {
                 }
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             // Master presets & bulk actions
             PresetsRow(
@@ -106,7 +114,7 @@ fun FlashlightApp() {
                     TorchManager.setBoth(false)
                 },
                 onPresetSelect = { level ->
-                    TorchManager.setAllLevel(level)
+                    TorchManager.applyPresetToActiveOrBoth(level)
                 }
             )
 
