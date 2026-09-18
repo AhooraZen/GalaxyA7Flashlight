@@ -25,18 +25,18 @@ object TorchManager {
 
     private var appContext: Context? = null
 
-    // Linux kernel S2MU005 LED subsystem nodes (Direct PMIC Control)
+    // Linux kernel S2MU005 PMIC sysfs nodes
     const val REAR_LED_SYSFS = "/sys/class/leds/leds-sec1/brightness"
     const val FRONT_LED_SYSFS = "/sys/class/leds/leds-sec2/brightness"
+    const val REAR_CAMERA_SYSFS = "/sys/class/camera/flash/rear_torch_flash"
 
-    // Rear brightness mapping (max 31): 0, Level 1 (6), Level 2 (12), Level 3 (18), Level 4 (24), Level 5 (31)
-    private val REAR_LEVEL_MAP = mapOf(
-        0 to 0,
-        1 to 6,
-        2 to 12,
-        3 to 18,
-        4 to 24,
-        5 to 31
+    // Rear camera HAL torch level mapping (sets persistent PMIC Torch mode with continuous current)
+    private val REAR_CAMERA_MAP = mapOf(
+        1 to "1001", // 25 mA
+        2 to "1002", // 50 mA
+        3 to "1004", // 75 mA
+        4 to "1006", // 100 mA
+        5 to "1009"  // 150 mA (Max continuous torch current)
     )
 
     // Front brightness mapping (max 15): 0, Level 1 (3), Level 2 (6), Level 3 (9), Level 4 (12), Level 5 (15)
@@ -191,8 +191,12 @@ object TorchManager {
         _isRearOn.value = enabled
         _rearLevel.value = clamped
 
-        val brightness = if (enabled) REAR_LEVEL_MAP[clamped] ?: 31 else 0
-        val cmd = "echo $brightness > $REAR_LED_SYSFS"
+        val cmd = if (enabled) {
+            val camVal = REAR_CAMERA_MAP[clamped] ?: "1009"
+            "echo $camVal > $REAR_CAMERA_SYSFS"
+        } else {
+            "echo 0 > $REAR_LED_SYSFS"
+        }
         Shell.cmd(cmd).submit { result ->
             if (!result.isSuccess) {
                 Log.e(TAG, "Rear command failed: $cmd, code=${result.code}")
@@ -250,10 +254,13 @@ object TorchManager {
         _isFrontOn.value = enabled
         _frontLevel.value = clamped
 
-        val rearBright = if (enabled) REAR_LEVEL_MAP[clamped] ?: 31 else 0
-        val frontBright = if (enabled) FRONT_LEVEL_MAP[clamped] ?: 15 else 0
-
-        val cmd = "echo $rearBright > $REAR_LED_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
+        val cmd = if (enabled) {
+            val rearCam = REAR_CAMERA_MAP[clamped] ?: "1009"
+            val frontBright = FRONT_LEVEL_MAP[clamped] ?: 15
+            "echo $rearCam > $REAR_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
+        } else {
+            "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS"
+        }
         Shell.cmd(cmd).submit()
 
         if (enabled) {
@@ -289,7 +296,7 @@ object TorchManager {
         val delayMs = (1000L / (clampedHz * 2)).coerceAtLeast(30L)
         specialJob = scope.launch {
             while (isActive) {
-                Shell.cmd("echo 31 > $REAR_LED_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+                Shell.cmd("echo 1009 > $REAR_CAMERA_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
                 delay(delayMs)
                 Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
                 delay(delayMs)
@@ -337,7 +344,7 @@ object TorchManager {
     }
 
     private suspend fun flash(durationMs: Long) {
-        Shell.cmd("echo 31 > $REAR_LED_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+        Shell.cmd("echo 1009 > $REAR_CAMERA_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
         delay(durationMs)
         Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
     }
