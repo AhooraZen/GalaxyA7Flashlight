@@ -52,6 +52,15 @@ object TorchManager {
         5 to 15
     )
 
+    // Front I2C FLED2 register 0x35 current mapping
+    private val FRONT_I2C_MAP = mapOf(
+        1 to "0x83",
+        2 to "0x86",
+        3 to "0x89",
+        4 to "0x8c",
+        5 to "0x8f"
+    )
+
     enum class SpecialMode { NONE, STROBE, SOS }
 
     private val _isRearOn = MutableStateFlow(false)
@@ -196,10 +205,11 @@ object TorchManager {
 
         val cmd = if (enabled) {
             val camVal = REAR_CAMERA_MAP[clamped] ?: "1009"
-            "echo $camVal > $REAR_CAMERA_SYSFS"
+            val selectReg = if (_isFrontOn.value) "0xc0" else "0x00"
+            "i2cset -y -f 7 0x3d 0x2d $selectReg b 2>/dev/null; echo $camVal > $REAR_CAMERA_SYSFS"
         } else {
             if (_isFrontOn.value) {
-                "echo 0 > $REAR_LED_SYSFS"
+                "echo 0 > $REAR_LED_SYSFS; i2cset -y -f 7 0x3d 0x2d 0x40 b 2>/dev/null; i2cset -y -f 7 0x3d 0x34 0x00 b 2>/dev/null"
             } else {
                 "echo 0 > $REAR_LED_SYSFS; $I2C_RESET_CMD"
             }
@@ -233,11 +243,13 @@ object TorchManager {
         _frontLevel.value = clamped
 
         val brightness = if (enabled) FRONT_LEVEL_MAP[clamped] ?: 15 else 0
+        val hexVal = FRONT_I2C_MAP[clamped] ?: "0x8f"
         val cmd = if (enabled) {
-            "echo $brightness > $FRONT_LED_SYSFS"
+            val selectReg = if (_isRearOn.value) "0xc0" else "0x40"
+            "i2cset -y -f 7 0x3d 0x2d $selectReg b 2>/dev/null; i2cset -y -f 7 0x3d 0x2e 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 $hexVal b 2>/dev/null; echo $brightness > $FRONT_LED_SYSFS"
         } else {
             if (_isRearOn.value) {
-                "echo 0 > $FRONT_LED_SYSFS"
+                "echo 0 > $FRONT_LED_SYSFS; i2cset -y -f 7 0x3d 0x2d 0x00 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 0x00 b 2>/dev/null"
             } else {
                 "echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
             }
@@ -272,7 +284,8 @@ object TorchManager {
         val cmd = if (enabled) {
             val rearCam = REAR_CAMERA_MAP[clamped] ?: "1009"
             val frontBright = FRONT_LEVEL_MAP[clamped] ?: 15
-            "echo $rearCam > $REAR_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
+            val hexVal = FRONT_I2C_MAP[clamped] ?: "0x8f"
+            "echo $rearCam > $REAR_CAMERA_SYSFS; i2cset -y -f 7 0x3d 0x2d 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x2e 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 $hexVal b 2>/dev/null; echo $frontBright > $FRONT_LED_SYSFS"
         } else {
             "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
         }
@@ -309,11 +322,13 @@ object TorchManager {
         _strobeHz.value = clampedHz
 
         val delayMs = (1000L / (clampedHz * 2)).coerceAtLeast(30L)
+        val onCmd = "echo 1009 > $REAR_CAMERA_SYSFS; i2cset -y -f 7 0x3d 0x2d 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x2e 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 0x8f b 2>/dev/null; echo 15 > $FRONT_LED_SYSFS"
+        val offCmd = "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
         specialJob = scope.launch {
             while (isActive) {
-                Shell.cmd("echo 1009 > $REAR_CAMERA_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+                Shell.cmd(onCmd).submit()
                 delay(delayMs)
-                Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
+                Shell.cmd(offCmd).submit()
                 delay(delayMs)
             }
         }
@@ -359,9 +374,11 @@ object TorchManager {
     }
 
     private suspend fun flash(durationMs: Long) {
-        Shell.cmd("echo 1009 > $REAR_CAMERA_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+        val onCmd = "echo 1009 > $REAR_CAMERA_SYSFS; i2cset -y -f 7 0x3d 0x2d 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x2e 0xc0 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 0x8f b 2>/dev/null; echo 15 > $FRONT_LED_SYSFS"
+        val offCmd = "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
+        Shell.cmd(onCmd).submit()
         delay(durationMs)
-        Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
+        Shell.cmd(offCmd).submit()
     }
 
     fun stopSpecialMode() {
