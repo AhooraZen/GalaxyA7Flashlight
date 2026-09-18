@@ -10,8 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -19,6 +18,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ahoora.a7flashlight.data.TorchManager
 import com.ahoora.a7flashlight.ui.components.HeaderSection
 import com.ahoora.a7flashlight.ui.components.PresetsRow
+import com.ahoora.a7flashlight.ui.components.ScreenLightDialog
+import com.ahoora.a7flashlight.ui.components.StrobeSosSection
+import com.ahoora.a7flashlight.ui.components.TimerDialog
 import com.ahoora.a7flashlight.ui.components.TorchCard
 import com.ahoora.a7flashlight.ui.theme.ElectricCyan
 import com.ahoora.a7flashlight.ui.theme.GalaxyA7FlashlightTheme
@@ -28,6 +30,7 @@ import com.ahoora.a7flashlight.ui.theme.PureBlack
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TorchManager.init(this)
         setContent {
             GalaxyA7FlashlightTheme {
                 FlashlightApp()
@@ -42,7 +45,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        TorchManager.close()
+        if (isFinishing) {
+            TorchManager.close()
+        }
     }
 }
 
@@ -53,6 +58,13 @@ fun FlashlightApp() {
     val isFrontOn by TorchManager.isFrontOn.collectAsStateWithLifecycle()
     val frontLevel by TorchManager.frontLevel.collectAsStateWithLifecycle()
     val isRootGranted by TorchManager.isRootGranted.collectAsStateWithLifecycle()
+    val autoOffSeconds by TorchManager.autoOffSeconds.collectAsStateWithLifecycle()
+    val remainingSeconds by TorchManager.remainingSeconds.collectAsStateWithLifecycle()
+    val specialMode by TorchManager.specialMode.collectAsStateWithLifecycle()
+    val strobeHz by TorchManager.strobeHz.collectAsStateWithLifecycle()
+
+    var showTimerDialog by remember { mutableStateOf(false) }
+    var showScreenLightDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = PureBlack
@@ -65,7 +77,12 @@ fun FlashlightApp() {
                 .padding(horizontal = 18.dp, vertical = 20.dp)
         ) {
             // App Header
-            HeaderSection(isRootGranted = isRootGranted)
+            HeaderSection(
+                isRootGranted = isRootGranted,
+                autoOffSeconds = autoOffSeconds,
+                remainingSeconds = remainingSeconds,
+                onTimerClick = { showTimerDialog = true }
+            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -118,7 +135,41 @@ fun FlashlightApp() {
                 }
             )
 
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // Strobe & SOS Emergency Section
+            StrobeSosSection(
+                specialMode = specialMode,
+                strobeHz = strobeHz,
+                onStrobeToggle = { enable ->
+                    if (enable) TorchManager.startStrobe(strobeHz) else TorchManager.stopSpecialMode()
+                },
+                onStrobeHzChange = { hz ->
+                    TorchManager.startStrobe(hz)
+                },
+                onSosToggle = { enable ->
+                    if (enable) TorchManager.startSos() else TorchManager.stopSpecialMode()
+                },
+                onScreenLightClick = {
+                    showScreenLightDialog = true
+                }
+            )
+
             Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Dialogs
+        if (showTimerDialog) {
+            TimerDialog(
+                currentSeconds = autoOffSeconds,
+                onDismiss = { showTimerDialog = false }
+            )
+        }
+
+        if (showScreenLightDialog) {
+            ScreenLightDialog(
+                onDismiss = { showScreenLightDialog = false }
+            )
         }
     }
 }

@@ -15,12 +15,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ahoora.a7flashlight.R
 import com.ahoora.a7flashlight.ui.theme.*
+
+private val STEP_LIST = listOf(1, 2, 3, 4, 5)
 
 @Composable
 fun TorchCard(
@@ -34,6 +38,8 @@ fun TorchCard(
     onLevelChange: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val haptic = LocalHapticFeedback.current
+
     val animatedBorder by animateColorAsState(
         targetValue = if (isOn) accentColor.copy(alpha = 0.9f) else BorderSubtle,
         animationSpec = tween(durationMillis = 250),
@@ -112,7 +118,10 @@ fun TorchCard(
                 // Master Toggle Switch
                 Switch(
                     checked = isOn,
-                    onCheckedChange = onToggle,
+                    onCheckedChange = { checked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggle(checked)
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = PureBlack,
                         checkedTrackColor = accentColor,
@@ -152,7 +161,11 @@ fun TorchCard(
             Slider(
                 value = level.toFloat(),
                 onValueChange = { newLevel ->
-                    onLevelChange(newLevel.toInt().coerceIn(1, 5))
+                    val stepInt = newLevel.toInt().coerceIn(1, 5)
+                    if (stepInt != level) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onLevelChange(stepInt)
+                    }
                 },
                 valueRange = 1f..5f,
                 steps = 3,
@@ -174,7 +187,7 @@ fun TorchCard(
                     .padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                listOf(1, 2, 3, 4, 5).forEach { step ->
+                STEP_LIST.forEach { step ->
                     val isSelected = step == level && isOn
                     Text(
                         text = "${step * 20}%",

@@ -3,6 +3,8 @@ name: Build Android Release APK
 on:
   push:
     branches: [ "main" ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
@@ -40,14 +42,17 @@ jobs:
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
-      - name: Create or Update GitHub Release
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete v1.3.0 --yes 2>/dev/null || true
-          git tag -d v1.3.0 2>/dev/null || true
-          git push origin :refs/tags/v1.3.0 2>/dev/null || true
-          gh release create v1.3.0 \
+          TAG_NAME="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$TAG_NAME" = "main" ]; then
+            TAG_NAME="v1.3.0"
+          fi
+          gh release create "$TAG_NAME" \
             app/build/outputs/apk/release/app-release.apk \
-            --title "Galaxy A7 Flashlight v1.3.0 (arm64-v8a)" \
-            --notes "v1.3.0: Optimized arm64-v8a release build with direct S2MU005 PMIC hardware brightness control (0..15 for Front Selfie, 0..31 for Rear Flash) and zero-lag libsu integration."
+            --title "Galaxy A7 Flashlight $TAG_NAME (arm64-v8a)" \
+            --notes "Galaxy A7 Flashlight release $TAG_NAME: Optimized arm64-v8a release build with direct S2MU005 PMIC hardware brightness control and zero-lag libsu root access." || \
+          gh release upload "$TAG_NAME" app/build/outputs/apk/release/app-release.apk --clobber

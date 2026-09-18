@@ -20,4 +20,36 @@
     <string name="preset_60">60%</string>
     <string name="preset_80">80%</string>
     <string name="preset_100">100%</string>
+    <string name="tile_master_title">A7 Flashlight</string>
+    <string name="tile_rear_title">Rear Flash</string>
+    <string name="tile_front_title">Front Flash</string>
+    <string name="quick_control_title">Quick Controls</string>
+    <string name="quick_control_subtitle">Instant Hardware Control</string>
+    <string name="close">Close</string>
+
+    <!-- Timer Strings -->
+    <string name="timer_title">Auto-Off Timer</string>
+    <string name="timer_desc">Automatically turns off flashlight to save battery and prevent overheating</string>
+    <string name="timer_30s">30 Seconds</string>
+    <string name="timer_1m">1 Minute</string>
+    <string name="timer_2m">2 Minutes</string>
+    <string name="timer_3m">3 Minutes</string>
+    <string name="timer_5m">5 Minutes</string>
+    <string name="timer_10m">10 Minutes</string>
+    <string name="timer_never">Never (Disabled)</string>
+    <string name="timer_custom">Custom Duration</string>
+    <string name="timer_unit_sec">Sec</string>
+    <string name="timer_unit_min">Min</string>
+    <string name="timer_unit_hr">Hour</string>
+    <string name="timer_set_custom">Set Custom Timer</string>
+    <string name="timer_active_format">%02d:%02d</string>
+    <string name="timer_off">Off</string>
+
+    <!-- Strobe, SOS, Screen Light Strings -->
+    <string name="strobe_title">Strobe &amp; Emergency</string>
+    <string name="strobe_btn">Strobe</string>
+    <string name="strobe_freq">%1$d Hz</string>
+    <string name="sos_btn">SOS Signal</string>
+    <string name="screen_light_btn">Screen Soft Light</string>
+    <string name="screen_light_title">Soft Screen Lantern</string>
 </resources>

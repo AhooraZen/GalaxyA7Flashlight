@@ -23,6 +23,53 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Quick Settings Tiles -->
+        <service
+            android:name=".service.MasterTorchTileService"
+            android:icon="@android:drawable/ic_dialog_info"
+            android:label="@string/tile_master_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".service.RearTorchTileService"
+            android:icon="@android:drawable/ic_dialog_info"
+            android:label="@string/tile_rear_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".service.FrontTorchTileService"
+            android:icon="@android:drawable/ic_dialog_info"
+            android:label="@string/tile_front_title"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- Floating Dialog Activity triggered on QS Tile Long-Press -->
+        <activity
+            android:name=".ui.quickcontrol.QuickControlDialogActivity"
+            android:theme="@style/Theme.GalaxyA7Flashlight.Dialog"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
     </application>
 
 </manifest>

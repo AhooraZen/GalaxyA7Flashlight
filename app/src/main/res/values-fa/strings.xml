@@ -20,4 +20,36 @@
     <string name="preset_60">۶۰٪</string>
     <string name="preset_80">۸۰٪</string>
     <string name="preset_100">۱۰۰٪</string>
+    <string name="tile_master_title">چراغ‌قوه A7</string>
+    <string name="tile_rear_title">فلش پشت</string>
+    <string name="tile_front_title">فلش جلو</string>
+    <string name="quick_control_title">کنترل سریع</string>
+    <string name="quick_control_subtitle">کنترل مستقیم سخت‌افزار</string>
+    <string name="close">بستن</string>
+
+    <!-- Timer Strings -->
+    <string name="timer_title">تایمر خاموشی خودکار</string>
+    <string name="timer_desc">خاموش کردن خودکار چراغ‌قوه جهت حفظ باتری و جلوگیری از داغ شدن</string>
+    <string name="timer_30s">۳۰ ثانیه</string>
+    <string name="timer_1m">۱ دقیقه</string>
+    <string name="timer_2m">۲ دقیقه</string>
+    <string name="timer_3m">۳ دقیقه</string>
+    <string name="timer_5m">۵ دقیقه</string>
+    <string name="timer_10m">۱۰ دقیقه</string>
+    <string name="timer_never">غیرفعال (همیشه روشن)</string>
+    <string name="timer_custom">زمان دلخواه</string>
+    <string name="timer_unit_sec">ثانیه</string>
+    <string name="timer_unit_min">دقیقه</string>
+    <string name="timer_unit_hr">ساعت</string>
+    <string name="timer_set_custom">تنظیم تایمر دلخواه</string>
+    <string name="timer_active_format">%02d:%02d</string>
+    <string name="timer_off">خاموش</string>
+
+    <!-- Strobe, SOS, Screen Light Strings -->
+    <string name="strobe_title">حالت‌های اضطراری و چشمک‌زن</string>
+    <string name="strobe_btn">چشمک‌زن (استروب)</string>
+    <string name="strobe_freq">%1$d هرتز</string>
+    <string name="sos_btn">سیگنال اضطراری SOS</string>
+    <string name="screen_light_btn">نور ملایم صفحه</string>
+    <string name="screen_light_title">فانوس ملایم نمایشگر</string>
 </resources>

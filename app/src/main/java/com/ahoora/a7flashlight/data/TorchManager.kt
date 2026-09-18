@@ -1,16 +1,29 @@
 package com.ahoora.a7flashlight.data
 
+import android.content.ComponentName
+import android.content.Context
+import android.service.quicksettings.TileService
 import android.util.Log
+import com.ahoora.a7flashlight.service.FrontTorchTileService
+import com.ahoora.a7flashlight.service.MasterTorchTileService
+import com.ahoora.a7flashlight.service.RearTorchTileService
 import com.topjohnwu.superuser.Shell
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 object TorchManager {
     private const val TAG = "TorchManager"
+    private const val PREFS_NAME = "torch_prefs"
+    private const val KEY_AUTO_OFF_SECONDS = "auto_off_seconds"
+
+    private var appContext: Context? = null
 
     // Primary Linux kernel S2MU005 LED subsystem nodes (Direct PMIC Control)
     const val REAR_LED_SYSFS = "/sys/class/leds/leds-sec1/brightness"
@@ -50,6 +63,8 @@ object TorchManager {
         5 to 15
     )
 
+    enum class SpecialMode { NONE, STROBE, SOS }
+
     private val _isRearOn = MutableStateFlow(false)
     val isRearOn: StateFlow<Boolean> = _isRearOn.asStateFlow()
 
@@ -65,10 +80,25 @@ object TorchManager {
     private val _isRootGranted = MutableStateFlow(false)
     val isRootGranted: StateFlow<Boolean> = _isRootGranted.asStateFlow()
 
+    // Timer duration in total seconds (0 = Never / Disabled)
+    private val _autoOffSeconds = MutableStateFlow(180) // default 3 minutes
+    val autoOffSeconds: StateFlow<Int> = _autoOffSeconds.asStateFlow()
+
+    private val _remainingSeconds = MutableStateFlow<Int?>(null)
+    val remainingSeconds: StateFlow<Int?> = _remainingSeconds.asStateFlow()
+
+    private val _specialMode = MutableStateFlow(SpecialMode.NONE)
+    val specialMode: StateFlow<SpecialMode> = _specialMode.asStateFlow()
+
+    private val _strobeHz = MutableStateFlow(5)
+    val strobeHz: StateFlow<Int> = _strobeHz.asStateFlow()
+
     private val scope = CoroutineScope(Dispatchers.IO)
+    private var timerJob: Job? = null
+    private var specialJob: Job? = null
 
     init {
-        Shell.enableVerboseLogging = true
+        Shell.enableVerboseLogging = false
         Shell.setDefaultBuilder(
             Shell.Builder.create()
                 .setFlags(Shell.FLAG_REDIRECT_STDERR)
@@ -77,12 +107,43 @@ object TorchManager {
         requestRoot()
     }
 
+    fun init(context: Context) {
+        appContext = context.applicationContext
+        initPrefs(context)
+        requestListeningState()
+    }
+
+    fun initPrefs(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        _autoOffSeconds.value = prefs.getInt(KEY_AUTO_OFF_SECONDS, 180)
+    }
+
+    fun requestListeningState() {
+        val ctx = appContext ?: return
+        try {
+            TileService.requestListeningState(ctx, ComponentName(ctx, MasterTorchTileService::class.java))
+            TileService.requestListeningState(ctx, ComponentName(ctx, RearTorchTileService::class.java))
+            TileService.requestListeningState(ctx, ComponentName(ctx, FrontTorchTileService::class.java))
+        } catch (e: Exception) {
+            Log.e(TAG, "Error requesting tile listening state", e)
+        }
+    }
+
     fun requestRoot() {
         scope.launch {
             try {
                 val isRoot = Shell.getShell().isRoot
                 _isRootGranted.value = isRoot
                 Log.d(TAG, "libsu Root Shell status: isRoot=$isRoot")
+                if (isRoot) {
+                    val out = Shell.cmd("cat $REAR_LED_SYSFS", "cat $FRONT_LED_SYSFS").exec().out
+                    if (out.isNotEmpty()) {
+                        val rearVal = out.getOrNull(0)?.trim()?.toIntOrNull() ?: 0
+                        val frontVal = out.getOrNull(1)?.trim()?.toIntOrNull() ?: 0
+                        _isRearOn.value = rearVal > 0
+                        _isFrontOn.value = frontVal > 0
+                    }
+                }
             } catch (e: Exception) {
                 Log.e(TAG, "Error obtaining root shell", e)
                 _isRootGranted.value = false
@@ -90,8 +151,57 @@ object TorchManager {
         }
     }
 
+    fun setAutoOffSeconds(seconds: Int, context: Context? = null) {
+        val valid = seconds.coerceAtLeast(0)
+        _autoOffSeconds.value = valid
+        val ctx = context ?: appContext
+        ctx?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit()
+            ?.putInt(KEY_AUTO_OFF_SECONDS, valid)?.apply()
+
+        if (_isRearOn.value || _isFrontOn.value) {
+            restartTimer()
+        }
+    }
+
+    fun restartTimer() {
+        timerJob?.cancel()
+        val duration = _autoOffSeconds.value
+        if (duration <= 0) {
+            _remainingSeconds.value = null
+            return
+        }
+        _remainingSeconds.value = duration
+        timerJob = scope.launch {
+            var left = duration
+            while (isActive && left > 0) {
+                delay(1000L)
+                left--
+                _remainingSeconds.value = left
+            }
+            if (isActive && left == 0) {
+                close()
+                _remainingSeconds.value = null
+            }
+        }
+    }
+
+    fun stopTimer() {
+        timerJob?.cancel()
+        timerJob = null
+        _remainingSeconds.value = null
+    }
+
     fun setRearTorch(enabled: Boolean, level: Int = _rearLevel.value) {
         val clamped = level.coerceIn(1, 5)
+        if (_isRearOn.value == enabled && _rearLevel.value == clamped && _specialMode.value == SpecialMode.NONE) {
+            return
+        }
+        if (_specialMode.value != SpecialMode.NONE) {
+            specialJob?.cancel()
+            specialJob = null
+            _specialMode.value = SpecialMode.NONE
+        }
+
         _isRearOn.value = enabled
         _rearLevel.value = clamped
 
@@ -104,17 +214,32 @@ object TorchManager {
                 Log.e(TAG, "Rear command failed: $cmd, code=${result.code}")
             }
         }
+
+        if (enabled || _isFrontOn.value) {
+            restartTimer()
+        } else {
+            stopTimer()
+        }
+        requestListeningState()
     }
 
     fun setFrontTorch(enabled: Boolean, level: Int = _frontLevel.value) {
         val clamped = level.coerceIn(1, 5)
+        if (_isFrontOn.value == enabled && _frontLevel.value == clamped && _specialMode.value == SpecialMode.NONE) {
+            return
+        }
+        if (_specialMode.value != SpecialMode.NONE) {
+            specialJob?.cancel()
+            specialJob = null
+            _specialMode.value = SpecialMode.NONE
+        }
+
         _isFrontOn.value = enabled
         _frontLevel.value = clamped
 
         val brightness = if (enabled) FRONT_LEVEL_MAP[clamped] ?: 15 else 0
         val camVal = if (enabled) "1" else "0"
 
-        // Set direct PMIC LED brightness and trigger camera node
         val cmd = if (enabled) {
             "echo $camVal > $FRONT_CAMERA_SYSFS; echo $brightness > $FRONT_LED_SYSFS"
         } else {
@@ -126,11 +251,46 @@ object TorchManager {
                 Log.e(TAG, "Front command failed: $cmd, code=${result.code}")
             }
         }
+
+        if (enabled || _isRearOn.value) {
+            restartTimer()
+        } else {
+            stopTimer()
+        }
+        requestListeningState()
     }
 
     fun setBoth(enabled: Boolean, level: Int = 5) {
-        setRearTorch(enabled, level)
-        setFrontTorch(enabled, level)
+        val clamped = level.coerceIn(1, 5)
+        if (_specialMode.value != SpecialMode.NONE) {
+            specialJob?.cancel()
+            specialJob = null
+            _specialMode.value = SpecialMode.NONE
+        }
+
+        _isRearOn.value = enabled
+        _rearLevel.value = clamped
+        _isFrontOn.value = enabled
+        _frontLevel.value = clamped
+
+        val rearBright = if (enabled) REAR_LEVEL_MAP[clamped] ?: 31 else 0
+        val rearCam = if (enabled) REAR_CAMERA_MAP[clamped] ?: "1009" else "0"
+        val frontBright = if (enabled) FRONT_LEVEL_MAP[clamped] ?: 15 else 0
+        val frontCam = if (enabled) "1" else "0"
+
+        val cmd = if (enabled) {
+            "echo $rearBright > $REAR_LED_SYSFS; echo $rearCam > $REAR_CAMERA_SYSFS; echo $frontCam > $FRONT_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
+        } else {
+            "echo 0 > $REAR_LED_SYSFS; echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_LED_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS"
+        }
+        Shell.cmd(cmd).submit()
+
+        if (enabled) {
+            restartTimer()
+        } else {
+            stopTimer()
+        }
+        requestListeningState()
     }
 
     fun applyPresetToActiveOrBoth(level: Int) {
@@ -146,9 +306,90 @@ object TorchManager {
         }
     }
 
+    fun startStrobe(hz: Int = _strobeHz.value) {
+        stopTimer()
+        specialJob?.cancel()
+        _isRearOn.value = false
+        _isFrontOn.value = false
+        _specialMode.value = SpecialMode.STROBE
+        val clampedHz = hz.coerceIn(1, 15)
+        _strobeHz.value = clampedHz
+
+        val delayMs = (1000L / (clampedHz * 2)).coerceAtLeast(30L)
+        specialJob = scope.launch {
+            while (isActive) {
+                Shell.cmd("echo 31 > $REAR_LED_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+                delay(delayMs)
+                Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
+                delay(delayMs)
+            }
+        }
+        requestListeningState()
+    }
+
+    fun startSos() {
+        stopTimer()
+        specialJob?.cancel()
+        _isRearOn.value = false
+        _isFrontOn.value = false
+        _specialMode.value = SpecialMode.SOS
+
+        val dot = 150L
+        val dash = 450L
+        val elementGap = 150L
+        val letterGap = 400L
+        val wordGap = 1200L
+
+        specialJob = scope.launch {
+            while (isActive) {
+                // ... S
+                repeat(3) {
+                    flash(dot)
+                    delay(elementGap)
+                }
+                delay(letterGap)
+                // --- O
+                repeat(3) {
+                    flash(dash)
+                    delay(elementGap)
+                }
+                delay(letterGap)
+                // ... S
+                repeat(3) {
+                    flash(dot)
+                    delay(elementGap)
+                }
+                delay(wordGap)
+            }
+        }
+        requestListeningState()
+    }
+
+    private suspend fun flash(durationMs: Long) {
+        Shell.cmd("echo 31 > $REAR_LED_SYSFS; echo 15 > $FRONT_LED_SYSFS").submit()
+        delay(durationMs)
+        Shell.cmd("echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS").submit()
+    }
+
+    fun stopSpecialMode() {
+        specialJob?.cancel()
+        specialJob = null
+        _specialMode.value = SpecialMode.NONE
+        close()
+    }
+
     fun close() {
+        stopTimer()
+        if (specialJob != null) {
+            specialJob?.cancel()
+            specialJob = null
+            _specialMode.value = SpecialMode.NONE
+        }
+        _isRearOn.value = false
+        _isFrontOn.value = false
         Shell.cmd(
             "echo 0 > $REAR_LED_SYSFS; echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_LED_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS"
         ).submit()
+        requestListeningState()
     }
 }
