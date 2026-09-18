@@ -208,7 +208,11 @@ object TorchManager {
         val brightness = if (enabled) REAR_LEVEL_MAP[clamped] ?: 31 else 0
         val camVal = if (enabled) REAR_CAMERA_MAP[clamped] ?: "1009" else "0"
 
-        val cmd = "echo $brightness > $REAR_LED_SYSFS; echo $camVal > $REAR_CAMERA_SYSFS"
+        val cmd = if (enabled) {
+            "echo $camVal > $REAR_CAMERA_SYSFS; echo $brightness > $REAR_LED_SYSFS"
+        } else {
+            "echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $REAR_LED_SYSFS"
+        }
         Shell.cmd(cmd).submit { result ->
             if (!result.isSuccess) {
                 Log.e(TAG, "Rear command failed: $cmd, code=${result.code}")
@@ -243,7 +247,7 @@ object TorchManager {
         val cmd = if (enabled) {
             "echo $camVal > $FRONT_CAMERA_SYSFS; echo $brightness > $FRONT_LED_SYSFS"
         } else {
-            "echo 0 > $FRONT_LED_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS"
+            "echo 0 > $FRONT_CAMERA_SYSFS; echo 0 > $FRONT_LED_SYSFS"
         }
 
         Shell.cmd(cmd).submit { result ->
@@ -279,9 +283,9 @@ object TorchManager {
         val frontCam = if (enabled) "1" else "0"
 
         val cmd = if (enabled) {
-            "echo $rearBright > $REAR_LED_SYSFS; echo $rearCam > $REAR_CAMERA_SYSFS; echo $frontCam > $FRONT_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
+            "echo $rearCam > $REAR_CAMERA_SYSFS; echo $rearBright > $REAR_LED_SYSFS; echo $frontCam > $FRONT_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
         } else {
-            "echo 0 > $REAR_LED_SYSFS; echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_LED_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS"
+            "echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS; echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS"
         }
         Shell.cmd(cmd).submit()
 
@@ -388,7 +392,7 @@ object TorchManager {
         _isRearOn.value = false
         _isFrontOn.value = false
         Shell.cmd(
-            "echo 0 > $REAR_LED_SYSFS; echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_LED_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS"
+            "echo 0 > $REAR_CAMERA_SYSFS; echo 0 > $FRONT_CAMERA_SYSFS; echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS"
         ).submit()
         requestListeningState()
     }
