@@ -11,8 +11,8 @@ android {
         applicationId = "com.ahoora.a7flashlight"
         minSdk = 26
         targetSdk = 34
-        versionCode = 8
-        versionName = "1.4.3"
+        versionCode = 9
+        versionName = "1.4.4"
 
         ndk {
             abiFilters.clear()

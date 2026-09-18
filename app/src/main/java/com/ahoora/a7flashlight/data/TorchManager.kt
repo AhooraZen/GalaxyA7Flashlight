@@ -30,6 +30,9 @@ object TorchManager {
     const val FRONT_LED_SYSFS = "/sys/class/leds/leds-sec2/brightness"
     const val REAR_CAMERA_SYSFS = "/sys/class/camera/flash/rear_torch_flash"
 
+    // S2MU005 PMIC hardware reset command (clears bias & enable registers 0x2D, 0x2E, 0x34, 0x35, 0x3C on I2C bus 7 addr 0x3D)
+    private const val I2C_RESET_CMD = "i2cset -y -f 7 0x3d 0x2d 0x00 b 2>/dev/null; i2cset -y -f 7 0x3d 0x2e 0x00 b 2>/dev/null; i2cset -y -f 7 0x3d 0x34 0x00 b 2>/dev/null; i2cset -y -f 7 0x3d 0x35 0x00 b 2>/dev/null; i2cset -y -f 7 0x3d 0x3c 0x00 b 2>/dev/null"
+
     // Rear camera HAL torch level mapping (sets persistent PMIC Torch mode with continuous current)
     private val REAR_CAMERA_MAP = mapOf(
         1 to "1001", // 25 mA
@@ -195,7 +198,11 @@ object TorchManager {
             val camVal = REAR_CAMERA_MAP[clamped] ?: "1009"
             "echo $camVal > $REAR_CAMERA_SYSFS"
         } else {
-            "echo 0 > $REAR_LED_SYSFS"
+            if (_isFrontOn.value) {
+                "echo 0 > $REAR_LED_SYSFS"
+            } else {
+                "echo 0 > $REAR_LED_SYSFS; $I2C_RESET_CMD"
+            }
         }
         Shell.cmd(cmd).submit { result ->
             if (!result.isSuccess) {
@@ -226,7 +233,15 @@ object TorchManager {
         _frontLevel.value = clamped
 
         val brightness = if (enabled) FRONT_LEVEL_MAP[clamped] ?: 15 else 0
-        val cmd = "echo $brightness > $FRONT_LED_SYSFS"
+        val cmd = if (enabled) {
+            "echo $brightness > $FRONT_LED_SYSFS"
+        } else {
+            if (_isRearOn.value) {
+                "echo 0 > $FRONT_LED_SYSFS"
+            } else {
+                "echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
+            }
+        }
         Shell.cmd(cmd).submit { result ->
             if (!result.isSuccess) {
                 Log.e(TAG, "Front command failed: $cmd, code=${result.code}")
@@ -259,7 +274,7 @@ object TorchManager {
             val frontBright = FRONT_LEVEL_MAP[clamped] ?: 15
             "echo $rearCam > $REAR_CAMERA_SYSFS; echo $frontBright > $FRONT_LED_SYSFS"
         } else {
-            "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS"
+            "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
         }
         Shell.cmd(cmd).submit()
 
@@ -366,7 +381,7 @@ object TorchManager {
         _isRearOn.value = false
         _isFrontOn.value = false
         Shell.cmd(
-            "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS"
+            "echo 0 > $REAR_LED_SYSFS; echo 0 > $FRONT_LED_SYSFS; $I2C_RESET_CMD"
         ).submit()
         requestListeningState()
     }
